@@ -1,11 +1,13 @@
 #include "includes.h"
 
-char *location; // буфер для сохранения локации
+char *fullUrl;
+
 CURL *curl;
 CURLcode curlResult;
 MemoryStruct dataStruct;
 char errorBuffer[CURL_ERROR_SIZE];
-char url[] = "curl wttr.in/";
+
+
 
 WeatherStruct weather;
 
@@ -16,8 +18,12 @@ int main(int args, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	location = calloc(strlen(argv[1]) + 1, sizeof(char));
-	strcpy(location, argv[1]);
+	// формирование url
+	fullUrl = (char *) calloc(strlen(URL) + strlen(argv[1]) + strlen(REQUEST_FORMAT) + 1, sizeof(char));
+	strcat(fullUrl, URL);
+	strcat(fullUrl, argv[1]);
+	strcat(fullUrl, REQUEST_FORMAT);
+
 
 	dataStruct.data = malloc(1);
 	dataStruct.size = 0;
@@ -34,12 +40,12 @@ int main(int args, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer);// буфер для сохранения описания возможной ошибки CURL
-	curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/8.16.0");
-	curl_easy_setopt(curl, CURLOPT_URL, "http://www.wttr.in/Казань?format=j2");// адрес для отправки http запросов
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);// функция для записи данных сессии
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void* )&dataStruct);	// буфер для записи данных сессии
-//	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);						// подробный вывод работы curl
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer);			// буфер для сохранения описания возможной ошибки CURL
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/8.16.0");	// выбор агента в GET заголовке
+	curl_easy_setopt(curl, CURLOPT_URL, fullUrl);						// адрес для отправки http запросов
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);			// функция для записи данных сессии
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void* )&dataStruct);		// буфер для записи данных сессии
+//	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);							// подробный вывод работы curl
 
 
 	curlResult = curl_easy_perform(curl);
@@ -48,10 +54,10 @@ int main(int args, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	// парсинг JSON-ответа и вывод интересующих элементов
 	int result = parseJSON(dataStruct.data, &weather);
 	if (result == 0) {
-
-		printf("Area is: %s\n", weather.areaName);
+		printf("Chosen area is: %s\n", weather.areaName);
 		printf("Current temperature: %s C\n", weather.curTemp);
 		printf("Weather describe: %s\n", weather.weatherDescribe);
 		printf("Wind direction: %s\n", weather.windDir);
